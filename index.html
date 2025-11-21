@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drawing App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .tabs-header {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #ddd;
+            overflow-x: auto;
+        }
+        
+        .tab-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px 5px 0 0;
+            background: #e0e0e0;
+            color: #555;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tab-button:hover {
+            background: #d0d0d0;
+        }
+        
+        .tab-button.active {
+            background: #4CAF50;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .tab-name {
+            cursor: pointer;
+        }
+        
+        .tab-name:hover {
+            text-decoration: underline;
+        }
+        
+        .tab-button .close-tab {
+            margin-left: 5px;
+            font-weight: bold;
+            opacity: 0.7;
+        }
+        
+        .tab-button .close-tab:hover {
+            opacity: 1;
+            color: #ff5555;
+        }
+        
+        .add-tab-btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px 5px 0 0;
+            background: #2196F3;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .add-tab-btn:hover {
+            background: #1976D2;
+        }
+        
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px;
+            background: #f8f8f8;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        
+        .tool-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        button.active {
+            background: #2196F3;
+        }
+        
+        button.eraser {
+            background: #ff9800;
+        }
+        
+        button.eraser:hover {
+            background: #e68900;
+        }
+        
+        button.text-btn {
+            background: #9C27B0;
+        }
+        
+        button.text-btn:hover {
+            background: #7B1FA2;
+        }
+        
+        button.danger {
+            background: #f44336;
+        }
+        
+        button.danger:hover {
+            background: #da190b;
+        }
+        
+        input[type="color"] {
+            width: 50px;
+            height: 40px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        input[type="range"] {
+            width: 150px;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .canvas-container {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            display: inline-block;
+            background: white;
+            position: relative;
+        }
+        
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        
+        canvas.text-mode {
+            cursor: text;
+        }
+        
+        .size-display {
+            display: inline-block;
+            min-width: 30px;
+            text-align: center;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            min-width: 300px;
+        }
+        
+        .modal-content h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        .text-input-popup {
+            position: absolute;
+            background: white;
+            border: 2px solid #2196F3;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 100;
+            display: none;
+        }
+        
+        .text-input-popup.active {
+            display: block;
+        }
+        
+        .text-input-popup input {
+            border: 1px solid #ddd;
+            padding: 5px;
+            font-size: 16px;
+            min-width: 200px;
+        }
+        
+        .text-input-popup button {
+            margin-left: 5px;
+            padding: 5px 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Drawing App</h1>
+        
+        <div class="tabs-header" id="tabsHeader">
+            <button class="add-tab-btn" id="addTabBtn">+</button>
+        </div>
+        
+        <div id="tabsContent"></div>
+    </div>
+    
+    <div class="modal" id="renameModal">
+        <div class="modal-content">
+            <h3>Rename Drawing</h3>
+            <input type="text" id="renameInput" placeholder="Enter new name">
+            <div class="modal-buttons">
+                <button id="cancelRename">Cancel</button>
+                <button id="confirmRename">Rename</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tabs = [];
+        let currentTabId = null;
+        let tabCounter = 0;
+        let renamingTabId = null;
+
+        class DrawingTab {
+            constructor(id, name) {
+                this.id = id;
+                this.name = name;
+                this.canvas = null;
+                this.ctx = null;
+                this.isDrawing = false;
+                this.isErasing = false;
+                this.isTextMode = false;
+                this.currentColor = '#000000';
+                this.currentSize = 5;
+                this.backgroundImage = null;
+                this.createElements();
+            }
+
+            createElements() {
+                // Create tab content
+                const tabContent = document.createElement('div');
+                tabContent.className = 'tab-content';
+                tabContent.id = `tab-${this.id}`;
+                tabContent.innerHTML = `
+                    <div class="toolbar">
+                        <div class="tool-group">
+                            <button class="draw-btn active">✏️ Draw</button>
+                            <button class="erase-btn eraser">🧹 Erase</button>
+                            <button class="text-btn">📝 Text</button>
+                        </div>
+                        
+                        <div class="tool-group">
+                            <label>Color:</label>
+                            <input type="color" class="color-picker" value="#000000">
+                        </div>
+                        
+                        <div class="tool-group">
+                            <label>Size:</label>
+                            <input type="range" class="brush-size" min="1" max="50" value="5">
+                            <span class="size-display">5</span>
+                        </div>
+                        
+                        <div class="tool-group">
+                            <label>Font Size:</label>
+                            <input type="range" class="font-size" min="12" max="72" value="24">
+                            <span class="font-size-display">24</span>
+                        </div>
+                        
+                        <div class="tool-group">
+                            <button class="import-btn">📁 Import Image</button>
+                            <input type="file" class="file-input" accept="image/*">
+                        </div>
+                        
+                        <div class="tool-group">
+                            <button class="clear-btn danger">🗑️ Clear</button>
+                        </div>
+                        
+                        <div class="tool-group">
+                            <button class="save-btn">💾 Save</button>
+                            <button class="load-btn">📂 Load</button>
+                            <button class="export-btn">📄 Export PDF</button>
+                        </div>
+                    </div>
+                    
+                    <div class="canvas-container">
+                        <canvas width="1000" height="600"></canvas>
+                        <div class="text-input-popup">
+                            <input type="text" class="text-input" placeholder="Enter text...">
+                            <button class="add-text-btn">Add</button>
+                            <button class="cancel-text-btn">Cancel</button>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('tabsContent').appendChild(tabContent);
+
+                // Get references
+                this.canvas = tabContent.querySelector('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.fontSize = 24;
+                
+                // Initialize canvas
+                this.ctx.fillStyle = 'white';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Bind events
+                this.bindEvents(tabContent);
+            }
+
+            bindEvents(tabContent) {
+                const drawBtn = tabContent.querySelector('.draw-btn');
+                const eraseBtn = tabContent.querySelector('.erase-btn');
+                const textBtn = tabContent.querySelector('.text-btn');
+                const colorPicker = tabContent.querySelector('.color-picker');
+                const brushSize = tabContent.querySelector('.brush-size');
+                const sizeDisplay = tabContent.querySelector('.size-display');
+                const fontSizeSlider = tabContent.querySelector('.font-size');
+                const fontSizeDisplay = tabContent.querySelector('.font-size-display');
+                const importBtn = tabContent.querySelector('.import-btn');
+                const fileInput = tabContent.querySelector('.file-input');
+                const clearBtn = tabContent.querySelector('.clear-btn');
+                const saveBtn = tabContent.querySelector('.save-btn');
+                const loadBtn = tabContent.querySelector('.load-btn');
+                const exportBtn = tabContent.querySelector('.export-btn');
+                const textInputPopup = tabContent.querySelector('.text-input-popup');
+                const textInput = tabContent.querySelector('.text-input');
+                const addTextBtn = tabContent.querySelector('.add-text-btn');
+                const cancelTextBtn = tabContent.querySelector('.cancel-text-btn');
+
+                let textX = 0;
+                let textY = 0;
+
+                // Brush size
+                brushSize.addEventListener('input', (e) => {
+                    this.currentSize = e.target.value;
+                    sizeDisplay.textContent = this.currentSize;
+                });
+
+                // Font size
+                fontSizeSlider.addEventListener('input', (e) => {
+                    this.fontSize = e.target.value;
+                    fontSizeDisplay.textContent = this.fontSize;
+                });
+
+                // Color picker
+                colorPicker.addEventListener('change', (e) => {
+                    this.currentColor = e.target.value;
+                });
+
+                // Draw mode
+                drawBtn.addEventListener('click', () => {
+                    this.isErasing = false;
+                    this.isTextMode = false;
+                    this.canvas.classList.remove('text-mode');
+                    drawBtn.classList.add('active');
+                    eraseBtn.classList.remove('active');
+                    textBtn.classList.remove('active');
+                    textInputPopup.classList.remove('active');
+                });
+
+                // Erase mode
+                eraseBtn.addEventListener('click', () => {
+                    this.isErasing = true;
+                    this.isTextMode = false;
+                    this.canvas.classList.remove('text-mode');
+                    eraseBtn.classList.add('active');
+                    drawBtn.classList.remove('active');
+                    textBtn.classList.remove('active');
+                    textInputPopup.classList.remove('active');
+                });
+
+                // Text mode
+                textBtn.addEventListener('click', () => {
+                    this.isTextMode = true;
+                    this.isErasing = false;
+                    this.isDrawing = false;
+                    this.canvas.classList.add('text-mode');
+                    textBtn.classList.add('active');
+                    drawBtn.classList.remove('active');
+                    eraseBtn.classList.remove('active');
+                });
+
+                // Canvas click for text
+                this.canvas.addEventListener('click', (e) => {
+                    if (this.isTextMode) {
+                        const rect = this.canvas.getBoundingClientRect();
+                        textX = e.clientX - rect.left;
+                        textY = e.clientY - rect.top;
+                        
+                        textInputPopup.style.left = `${e.clientX - rect.left}px`;
+                        textInputPopup.style.top = `${e.clientY - rect.top}px`;
+                        textInputPopup.classList.add('active');
+                        textInput.value = '';
+                        textInput.focus();
+                    }
+                });
+
+                // Add text button
+                addTextBtn.addEventListener('click', () => {
+                    const text = textInput.value;
+                    if (text.trim()) {
+                        this.ctx.globalCompositeOperation = 'source-over';
+                        this.ctx.font = `${this.fontSize}px Arial`;
+                        this.ctx.fillStyle = this.currentColor;
+                        this.ctx.fillText(text, textX, textY);
+                    }
+                    textInputPopup.classList.remove('active');
+                });
+
+                // Cancel text button
+                cancelTextBtn.addEventListener('click', () => {
+                    textInputPopup.classList.remove('active');
+                });
+
+                // Enter key to add text
+                textInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        addTextBtn.click();
+                    }
+                });
+
+                // Canvas drawing
+                this.canvas.addEventListener('mousedown', (e) => {
+                    if (!this.isTextMode) this.startDrawing(e);
+                });
+                this.canvas.addEventListener('mousemove', (e) => this.draw(e));
+                this.canvas.addEventListener('mouseup', () => this.stopDrawing());
+                this.canvas.addEventListener('mouseout', () => this.stopDrawing());
+
+                // Touch support
+                this.canvas.addEventListener('touchstart', (e) => {
+                    if (!this.isTextMode) {
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        const mouseEvent = new MouseEvent('mousedown', {
+                            clientX: touch.clientX,
+                            clientY: touch.clientY
+                        });
+                        this.canvas.dispatchEvent(mouseEvent);
+                    }
+                });
+
+                this.canvas.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const mouseEvent = new MouseEvent('mousemove', {
+                        clientX: touch.clientX,
+                        clientY: touch.clientY
+                    });
+                    this.canvas.dispatchEvent(mouseEvent);
+                });
+
+                this.canvas.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    const mouseEvent = new MouseEvent('mouseup', {});
+                    this.canvas.dispatchEvent(mouseEvent);
+                });
+
+                // Clear canvas
+                clearBtn.addEventListener('click', () => {
+                    if (confirm('Are you sure you want to clear the canvas?')) {
+                        this.ctx.fillStyle = 'white';
+                        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                        if (this.backgroundImage) {
+                            this.ctx.drawImage(this.backgroundImage, 0, 0, this.canvas.width, this.canvas.height);
+                        }
+                    }
+                });
+
+                // Import image
+                importBtn.addEventListener('click', () => fileInput.click());
+
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                this.backgroundImage = img;
+                                this.ctx.globalCompositeOperation = 'source-over';
+                                this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
+                            };
+                            img.onerror = () => {
+                                alert('Error loading image. Please try a different file.');
+                            };
+                            img.src = event.target.result;
+                        };
+                        reader.onerror = () => {
+                            alert('Error reading file. Please try again.');
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        alert('Please select a valid image file.');
+                    }
+                    fileInput.value = '';
+                });
+
+                // Save drawing
+                saveBtn.addEventListener('click', () => {
+                    const link = document.createElement('a');
+                    link.download = `${this.name}.png`;
+                    link.href = this.canvas.toDataURL();
+                    link.click();
+                });
+
+                // Load drawing
+                loadBtn.addEventListener('click', () => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                const img = new Image();
+                                img.onload = () => {
+                                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                                    this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
+                                };
+                                img.src = event.target.result;
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    };
+                    input.click();
+                });
+
+                // Export to PDF
+                exportBtn.addEventListener('click', () => {
+                    const { jsPDF } = window.jspdf;
+                    const imgData = this.canvas.toDataURL('image/png');
+                    
+                    const pdf = new jsPDF({
+                        orientation: this.canvas.width > this.canvas.height ? 'landscape' : 'portrait',
+                        unit: 'px',
+                        format: [this.canvas.width, this.canvas.height]
+                    });
+                    
+                    pdf.addImage(imgData, 'PNG', 0, 0, this.canvas.width, this.canvas.height);
+                    pdf.save(`${this.name}.pdf`);
+                });
+            }
+
+            startDrawing(e) {
+                this.isDrawing = true;
+                this.draw(e);
+            }
+
+            stopDrawing() {
+                this.isDrawing = false;
+                this.ctx.beginPath();
+            }
+
+            draw(e) {
+                if (!this.isDrawing) return;
+
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                this.ctx.lineWidth = this.currentSize;
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+
+                if (this.isErasing) {
+                    this.ctx.globalCompositeOperation = 'destination-out';
+                } else {
+                    this.ctx.globalCompositeOperation = 'source-over';
+                    this.ctx.strokeStyle = this.currentColor;
+                }
+
+                this.ctx.lineTo(x, y);
+                this.ctx.stroke();
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, y);
+            }
+        }
+
+        function createTab() {
+            tabCounter++;
+            const tab = new DrawingTab(tabCounter, `Drawing ${tabCounter}`);
+            tabs.push(tab);
+            
+            // Create tab button
+            const tabButton = document.createElement('button');
+            tabButton.className = 'tab-button';
+            tabButton.innerHTML = `
+                <span class="tab-name">📄 ${tab.name}</span>
+                <span class="close-tab">×</span>
+            `;
+            tabButton.dataset.tabId = tab.id;
+            
+            tabButton.querySelector('.tab-name').addEventListener('click', () => switchTab(tab.id));
+            tabButton.querySelector('.tab-name').addEventListener('dblclick', () => renameTab(tab.id));
+            tabButton.querySelector('.close-tab').addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeTab(tab.id);
+            });
+            
+            const addBtn = document.getElementById('addTabBtn');
+            addBtn.parentElement.insertBefore(tabButton, addBtn);
+            
+            switchTab(tab.id);
+        }
+
+        function switchTab(tabId) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const activeBtn = document.querySelector(`[data-tab-id="${tabId}"]`);
+            if (activeBtn) activeBtn.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            const activeContent = document.getElementById(`tab-${tabId}`);
+            if (activeContent) activeContent.classList.add('active');
+            
+            currentTabId = tabId;
+        }
+
+        function renameTab(tabId) {
+            renamingTabId = tabId;
+            const tab = tabs.find(t => t.id === tabId);
+            const renameInput = document.getElementById('renameInput');
+            renameInput.value = tab.name;
+            document.getElementById('renameModal').classList.add('active');
+            renameInput.focus();
+            renameInput.select();
+        }
+
+        function closeTab(tabId) {
+            if (tabs.length === 1) {
+                alert('You must have at least one tab open!');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to close this tab? Any unsaved work will be lost.')) {
+                // Remove tab
+                const index = tabs.findIndex(t => t.id === tabId);
+                tabs.splice(index, 1);
+                
+                // Remove tab button
+                const tabButton = document.querySelector(`[data-tab-id="${tabId}"]`);
+                tabButton.remove();
+                
+                // Remove tab content
+                document.getElementById(`tab-${tabId}`).remove();
+                
+                // Switch to another tab
+                if (currentTabId === tabId) {
+                    switchTab(tabs[0].id);
+                }
+            }
+        }
+
+        // Modal events
+        document.getElementById('confirmRename').addEventListener('click', () => {
+            const newName = document.getElementById('renameInput').value.trim();
+            if (newName && renamingTabId) {
+                const tab = tabs.find(t => t.id === renamingTabId);
+                tab.name = newName;
+                const tabButton = document.querySelector(`[data-tab-id="${renamingTabId}"] .tab-name`);
+                tabButton.textContent = `📄 ${newName}`;
+            }
+            document.getElementById('renameModal').classList.remove('active');
+            renamingTabId = null;
+        });
+
+        document.getElementById('cancelRename').addEventListener('click', () => {
+            document.getElementById('renameModal').classList.remove('active');
+            renamingTabId = null;
+        });
+
+        document.getElementById('renameInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('confirmRename').click();
+            }
+        });
+
+        // Initialize with first tab
+        document.getElementById('addTabBtn').addEventListener('click', createTab);
+        createTab();
+    </script>
+</body>
+</html>
