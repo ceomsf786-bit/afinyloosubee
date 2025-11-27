@@ -157,6 +157,14 @@
             background: #7B1FA2;
         }
         
+        button.line-btn {
+            background: #00BCD4;
+        }
+        
+        button.line-btn:hover {
+            background: #0097A7;
+        }
+        
         button.undo-btn {
             background: #607D8B;
         }
@@ -318,7 +326,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎨 SNT TUTORING 2025</h1>
+        <h1>🎨 Drawing App</h1>
         
         <div class="tabs-header" id="tabsHeader">
             <button class="add-tab-btn" id="addTabBtn">+</button>
@@ -376,6 +384,9 @@
                 this.isDrawing = false;
                 this.isErasing = false;
                 this.isTextMode = false;
+                this.isLineMode = false;
+                this.lineStart = null;
+                this.tempCanvas = null;
                 this.currentColor = '#000000';
                 this.currentSize = 5;
                 this.backgroundImage = null;
@@ -394,6 +405,7 @@
                     <div class="toolbar">
                         <div class="tool-group">
                             <button class="draw-btn active">✏️ Draw</button>
+                            <button class="line-btn">📏 Line</button>
                             <button class="erase-btn eraser">🧹 Erase</button>
                             <button class="text-btn">📝 Text</button>
                             <button class="undo-btn" disabled>↶ Undo</button>
@@ -504,6 +516,7 @@
 
             bindEvents(tabContent) {
                 const drawBtn = tabContent.querySelector('.draw-btn');
+                const lineBtn = tabContent.querySelector('.line-btn');
                 const eraseBtn = tabContent.querySelector('.erase-btn');
                 const textBtn = tabContent.querySelector('.text-btn');
                 const undoBtn = tabContent.querySelector('.undo-btn');
@@ -551,8 +564,24 @@
                 drawBtn.addEventListener('click', () => {
                     this.isErasing = false;
                     this.isTextMode = false;
+                    this.isLineMode = false;
                     this.canvas.classList.remove('text-mode');
                     drawBtn.classList.add('active');
+                    lineBtn.classList.remove('active');
+                    eraseBtn.classList.remove('active');
+                    textBtn.classList.remove('active');
+                    textInputPopup.classList.remove('active');
+                });
+
+                // Line mode
+                lineBtn.addEventListener('click', () => {
+                    this.isLineMode = true;
+                    this.isErasing = false;
+                    this.isTextMode = false;
+                    this.isDrawing = false;
+                    this.lineStart = null;
+                    lineBtn.classList.add('active');
+                    drawBtn.classList.remove('active');
                     eraseBtn.classList.remove('active');
                     textBtn.classList.remove('active');
                     textInputPopup.classList.remove('active');
@@ -562,9 +591,11 @@
                 eraseBtn.addEventListener('click', () => {
                     this.isErasing = true;
                     this.isTextMode = false;
+                    this.isLineMode = false;
                     this.canvas.classList.remove('text-mode');
                     eraseBtn.classList.add('active');
                     drawBtn.classList.remove('active');
+                    lineBtn.classList.remove('active');
                     textBtn.classList.remove('active');
                     textInputPopup.classList.remove('active');
                 });
@@ -574,9 +605,11 @@
                     this.isTextMode = true;
                     this.isErasing = false;
                     this.isDrawing = false;
+                    this.isLineMode = false;
                     this.canvas.classList.add('text-mode');
                     textBtn.classList.add('active');
                     drawBtn.classList.remove('active');
+                    lineBtn.classList.remove('active');
                     eraseBtn.classList.remove('active');
                 });
 
@@ -622,9 +655,55 @@
 
                 // Canvas drawing
                 this.canvas.addEventListener('mousedown', (e) => {
-                    if (!this.isTextMode) this.startDrawing(e);
+                    if (this.isLineMode) {
+                        const rect = this.canvas.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+                        
+                        if (!this.lineStart) {
+                            this.lineStart = { x, y };
+                            this.tempCanvas = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                        } else {
+                            // Draw final line
+                            this.ctx.putImageData(this.tempCanvas, 0, 0);
+                            this.ctx.globalCompositeOperation = 'source-over';
+                            this.ctx.strokeStyle = this.currentColor;
+                            this.ctx.lineWidth = this.currentSize;
+                            this.ctx.lineCap = 'round';
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(this.lineStart.x, this.lineStart.y);
+                            this.ctx.lineTo(x, y);
+                            this.ctx.stroke();
+                            this.lineStart = null;
+                            this.tempCanvas = null;
+                            this.saveState();
+                        }
+                    } else if (!this.isTextMode) {
+                        this.startDrawing(e);
+                    }
                 });
-                this.canvas.addEventListener('mousemove', (e) => this.draw(e));
+                
+                this.canvas.addEventListener('mousemove', (e) => {
+                    if (this.isLineMode && this.lineStart && this.tempCanvas) {
+                        const rect = this.canvas.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+                        
+                        // Draw preview line
+                        this.ctx.putImageData(this.tempCanvas, 0, 0);
+                        this.ctx.globalCompositeOperation = 'source-over';
+                        this.ctx.strokeStyle = this.currentColor;
+                        this.ctx.lineWidth = this.currentSize;
+                        this.ctx.lineCap = 'round';
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(this.lineStart.x, this.lineStart.y);
+                        this.ctx.lineTo(x, y);
+                        this.ctx.stroke();
+                    } else {
+                        this.draw(e);
+                    }
+                });
+                
                 this.canvas.addEventListener('mouseup', () => this.stopDrawing());
                 this.canvas.addEventListener('mouseout', () => this.stopDrawing());
 
@@ -765,6 +844,14 @@
                     pdf.addImage(imgData, 'PNG', 0, 0, this.canvas.width, this.canvas.height);
                     pdf.save(`${this.name}.pdf`);
                 });
+                
+                // Export all tabs to PDF (shown in toolbar of first tab only)
+                if (this.id === 1) {
+                    const exportAllBtn = document.createElement('button');
+                    exportAllBtn.textContent = '📑 Export All to PDF';
+                    exportAllBtn.addEventListener('click', () => exportAllTabsToPDF());
+                    tabContent.querySelector('.toolbar .tool-group:last-child').appendChild(exportAllBtn);
+                }
             }
 
             startDrawing(e) {
@@ -883,6 +970,36 @@
                     switchTab(tabs[0].id);
                 }
             }
+        }
+        
+        function exportAllTabsToPDF() {
+            const { jsPDF } = window.jspdf;
+            
+            if (tabs.length === 0) {
+                alert('No tabs to export!');
+                return;
+            }
+            
+            const firstTab = tabs[0];
+            const pdf = new jsPDF({
+                orientation: firstTab.canvas.width > firstTab.canvas.height ? 'landscape' : 'portrait',
+                unit: 'px',
+                format: [firstTab.canvas.width, firstTab.canvas.height]
+            });
+            
+            // Add first page
+            const firstImgData = firstTab.canvas.toDataURL('image/png');
+            pdf.addImage(firstImgData, 'PNG', 0, 0, firstTab.canvas.width, firstTab.canvas.height);
+            
+            // Add remaining pages
+            for (let i = 1; i < tabs.length; i++) {
+                const tab = tabs[i];
+                pdf.addPage([tab.canvas.width, tab.canvas.height], tab.canvas.width > tab.canvas.height ? 'landscape' : 'portrait');
+                const imgData = tab.canvas.toDataURL('image/png');
+                pdf.addImage(imgData, 'PNG', 0, 0, tab.canvas.width, tab.canvas.height);
+            }
+            
+            pdf.save('all-drawings.pdf');
         }
 
         // Modal events - Rename
